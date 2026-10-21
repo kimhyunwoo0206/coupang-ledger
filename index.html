@@ -152,7 +152,7 @@ tbody td.tl{text-align:left}tbody td.tr{text-align:right}
       <div class="card">
         <div class="card-hd"><span class="card-title">📊 생산 및 물류 수불일보</span></div>
         <div class="card-body" style="padding:12px 20px">
-          <div class="sec-hd">원료·부재료 <span>│ 전일 + 입고 − 투입 − 로스 = 현재고 (재고는 정수, 소수점 잔량은 로스)</span></div><div class="tbl-wrap" id="tb1"></div>
+          <div class="sec-hd">원료·부재료 <span>│ 전일 + 입고 − 투입 = 현재고 (재고는 정수, 소수점 잔량은 투입에 포함)</span></div><div class="tbl-wrap" id="tb1"></div>
           <div class="sec-hd">반제품 <span>│ 전일 + 생산 − 투입 = 현재고 (kg)</span></div><div class="tbl-wrap" id="tb2"></div>
           <div class="sec-hd">완제품 <span>│ 전일 + 생산 − 출고 = 현재고</span></div><div class="tbl-wrap" id="tb3"></div>
           <div class="sec-hd">부자재 <span>│ 전일 + 입고 − 투입(레시피) = 현재고</span></div><div class="tbl-wrap" id="tb4"></div>
@@ -260,10 +260,10 @@ function renderT1(d,ch,rows){
   if(!keys.size)return nd('tb1');
   const R=[...keys].map(k=>{const l=RAWLOT[k]||{};const [c,lot]=k.split('|');const prev=(l.date<d?(l.qty||0):0)-(bef[k]||0)-(lb[k]||0),inn=l.date===d?(l.qty||0):0,use=tod[k]||0,loss=lt[k]||0;return {c,lot,l,prev,inn,use,loss,cur:prev+inn-use-loss,us:users[k]};})
     .sort((a,b)=>rawGbn(a.c).localeCompare(rawGbn(b.c))||a.c.localeCompare(b.c)||a.lot.localeCompare(b.lot));
-  let h='<table><thead><tr><th>구분</th><th style="min-width:130px;text-align:left">품목명</th><th>LOT</th><th>규격</th><th>전일재고</th><th>입고</th><th>투입</th><th>로스</th><th>현재고</th><th>거래처</th><th>비고</th></tr></thead><tbody>';
+  let h='<table><thead><tr><th>구분</th><th style="min-width:130px;text-align:left">품목명</th><th>LOT</th><th>규격</th><th>전일재고</th><th>입고</th><th>투입</th><th>현재고</th><th>거래처</th><th>비고</th></tr></thead><tbody>';
   const ni=(c,v)=>{const x=Math.round(kq(c,v)*1000)/1000;return Math.abs(x)<0.0005?'-':Number.isInteger(Math.round(x*1000)/1000)?x.toLocaleString('ko-KR'):n(x,1);};
   R.forEach(r=>{const adj=String(r.l.src||'').includes('조정');
-    h+='<tr><td>'+gt(rawGbn(r.c))+'</td><td class="tl">'+E(nm(r.c))+'</td><td>'+lotBtn(r.lot,'raw',r.c)+'</td><td>'+unitOf(r.c)+'</td><td class="tr">'+ni(r.c,r.prev)+'</td><td class="tr">'+ni(r.c,r.inn)+'</td><td class="tr">'+n(kq(r.c,r.use),1)+'</td><td class="tr" style="color:var(--red)">'+n(kq(r.c,r.loss),1)+'</td>'
+    h+='<tr><td>'+gt(rawGbn(r.c))+'</td><td class="tl">'+E(nm(r.c))+'</td><td>'+lotBtn(r.lot,'raw',r.c)+'</td><td>'+unitOf(r.c)+'</td><td class="tr">'+ni(r.c,r.prev)+'</td><td class="tr">'+ni(r.c,r.inn)+'</td><td class="tr">'+n(kq(r.c,r.use+r.loss),1)+'</td>'
       +'<td class="tr curr-col">'+ni(r.c,r.cur)+'</td><td style="font-size:11px">'+E(r.l.partner||(String(r.l.src||'').includes('MF')?'MF 당일 매입':''))+'</td>'
       +'<td class="tl note-s">'+(adj?'<span class="adj">기초 이월</span>':'')+'</td></tr>';});
   $('tb1').innerHTML=h+'</tbody></table>';
