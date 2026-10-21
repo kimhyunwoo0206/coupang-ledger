@@ -190,7 +190,11 @@ const gt=g=>'<span class="gbn-tag gbn-'+g+'">'+g+'</span>';
 const lotBtn=(lot,kind,code)=>lot?'<button class="lot-btn" data-lot="'+E(lot)+'" data-kind="'+(kind||'')+'" data-code="'+E(code||'')+'">'+E(lot)+'</button>':'<span style="color:var(--g3)">-</span>';
 const cenOf=o=>o.center||(o.ch==='MF'?'MF34':o.ch);
 const rawGbn=c=>/^B-/.test(c)?'부재료':/^S-/.test(c)?'반제품':'원료';
-const unitOf=c=>{const l=CP.raw_lots.find(x=>x.code===c);const u=l?l.unit_kg:1;if(/^B-/.test(c))return '팩';if(c==='S-701')return '축';if(c==='S-609')return '박스(1.2kg)';return u&&u!=1?'박스('+n(u)+'kg)':'kg';};
+const isKg=c=>/^R-|^P-610/.test(c);
+const ukOf=c=>{const l=CP.raw_lots.find(x=>x.code===c);return l&&l.unit_kg?l.unit_kg:1;};
+const nk=v=>{const x=n(v,1);return x==='-'?'0kg':x+'kg';};
+const kq=(c,q)=>isKg(c)?(q||0)*ukOf(c):q;
+const unitOf=c=>{if(/^B-/.test(c))return '팩';if(c==='S-701')return '축';if(c==='S-609')return '박스(1.2kg)';return 'kg';};
 
 async function load(){
   try{CP=await fetch(DATA_URL).then(r=>r.json());}catch(e){CP=null;}
@@ -257,8 +261,8 @@ function renderT1(d,ch,rows){
     .sort((a,b)=>rawGbn(a.c).localeCompare(rawGbn(b.c))||a.c.localeCompare(b.c)||a.lot.localeCompare(b.lot));
   let h='<table><thead><tr><th>구분</th><th style="min-width:130px;text-align:left">품목명</th><th>LOT</th><th>규격</th><th>전일재고</th><th>입고</th><th>투입</th><th>현재고</th><th>거래처</th><th>비고</th></tr></thead><tbody>';
   R.forEach(r=>{const adj=String(r.l.src||'').includes('조정');
-    h+='<tr><td>'+gt(rawGbn(r.c))+'</td><td class="tl">'+E(nm(r.c))+'</td><td>'+lotBtn(r.lot,'raw',r.c)+'</td><td>'+unitOf(r.c)+'</td><td class="tr">'+n(r.prev)+'</td><td class="tr">'+n(r.inn)+'</td><td class="tr">'+n(r.use)+'</td>'
-      +'<td class="tr curr-col">'+n(r.cur)+'</td><td style="font-size:11px">'+E(r.l.partner||(String(r.l.src||'').includes('MF')?'MF 당일 매입':''))+'</td>'
+    h+='<tr><td>'+gt(rawGbn(r.c))+'</td><td class="tl">'+E(nm(r.c))+'</td><td>'+lotBtn(r.lot,'raw',r.c)+'</td><td>'+unitOf(r.c)+'</td><td class="tr">'+n(kq(r.c,r.prev),1)+'</td><td class="tr">'+n(kq(r.c,r.inn),1)+'</td><td class="tr">'+n(kq(r.c,r.use),1)+'</td>'
+      +'<td class="tr curr-col">'+n(kq(r.c,r.cur),1)+'</td><td style="font-size:11px">'+E(r.l.partner||(String(r.l.src||'').includes('MF')?'MF 당일 매입':''))+'</td>'
       +'<td class="tl note-s">'+(adj?'<span class="adj">기초 이월</span>':'')+'</td></tr>';});
   $('tb1').innerHTML=h+'</tbody></table>';
 }
@@ -313,7 +317,7 @@ function openLot(lot,kind,code){
   const qsum=recs.reduce((s,o)=>s+o.qty,0);
   let body='<div style="padding:18px">';
   body+='<div class="ic-grid"><div class="ic"><div class="l">LOT 번호</div><div class="v">'+E(lot)+'</div></div><div class="ic"><div class="l">유형</div><div class="v">'+type+'</div></div><div class="ic"><div class="l">품목명</div><div class="v">'+E(pname)+'</div></div><div class="ic"><div class="l">품목코드</div><div class="v">'+E(pcode||'-')+'</div></div></div>';
-  if(L)body+='<div class="ic-grid"><div class="ic"><div class="l">입고일</div><div class="v">'+L.date+'</div></div><div class="ic"><div class="l">입고 구분</div><div class="v" style="font-size:11px">'+E(L.src)+'</div></div><div class="ic"><div class="l">입고량</div><div class="v" style="color:#1e6fb5">'+n(L.qty)+'</div></div><div class="ic"><div class="l">현재 잔량</div><div class="v" style="color:#0d8a72">'+n(L.left)+'</div></div></div>'+(L.partner?'<div style="text-align:center;font-size:12px;color:#8c95a3;margin:-6px 0 12px">거래처: '+E(L.partner)+'</div>':'');
+  if(L)body+='<div class="ic-grid"><div class="ic"><div class="l">입고일</div><div class="v">'+L.date+'</div></div><div class="ic"><div class="l">입고 구분</div><div class="v" style="font-size:11px">'+E(L.src)+'</div></div><div class="ic"><div class="l">입고량</div><div class="v" style="color:#1e6fb5">'+(kind==='raw'&&isKg(code)?nk(kq(code,L.qty)):n(L.qty))+'</div></div><div class="ic"><div class="l">현재 잔량</div><div class="v" style="color:#0d8a72">'+(kind==='raw'&&isKg(code)?nk(kq(code,L.left)):n(L.left))+'</div></div></div>'+(L.partner?'<div style="text-align:center;font-size:12px;color:#8c95a3;margin:-6px 0 12px">거래처: '+E(L.partner)+'</div>':'');
   if(type==='완제품'||type==='반제품'){
     body+='<div style="text-align:center;margin-bottom:14px;font-size:12px;color:#8c95a3">📅 작업일: <strong>'+(recs[0]?recs[0].date:'')+'</strong> · 생산·출고 '+n(qsum,0)+'개</div>';
     // 투입 원료·반제품 (역추적)
@@ -322,7 +326,7 @@ function openLot(lot,kind,code){
       const k=r.code+'|'+r.lot;const x=mats.get(k)||{r,qty:0,kg:0};x.qty+=r.qty||0;x.kg+=r.kg||0;mats.set(k,x);});});
     let t='<div class="tbl-wrap"><table><thead><tr>'+TH('구분')+TH('재료명')+TH('LOT (클릭시 추적)')+TH('입고일')+TH('투입량')+TH('단위')+TH('비고')+'</tr></thead><tbody>';
     [...mats.values()].forEach(({r,qty,kg})=>{const l=RAWLOT[r.code+'|'+String(r.lot).split(',')[0]];
-      t+='<tr><td>'+gt(r.byproduct?'원료':rawGbn(r.code))+'</td><td class="tl">'+E(nm(r.code))+(r.byproduct?' (손질 부산물)':'')+'</td><td>'+String(r.lot).split(',').map(x=>lotBtn(x,'raw',r.code)).join(' ')+'</td><td>'+(l?l.date:'')+'</td><td class="tr">'+n(qty)+'</td><td>'+(r.sauce?'팩':unitOf(r.code))+'</td><td class="tl note-s">'+(r.sauce?E(r.note||''):(kg&&r.unit_kg!=1?n(kg,1)+'kg':''))+(l&&String(l.src).includes('조정')?' <span class="adj">기초 이월</span>':'')+'</td></tr>';});
+      t+='<tr><td>'+gt(r.byproduct?'원료':rawGbn(r.code))+'</td><td class="tl">'+E(nm(r.code))+(r.byproduct?' (손질 부산물)':'')+'</td><td>'+String(r.lot).split(',').map(x=>lotBtn(x,'raw',r.code)).join(' ')+'</td><td>'+(l?l.date:'')+'</td><td class="tr">'+(r.sauce?n(qty):n(kq(r.code,qty),1))+'</td><td>'+(r.sauce?'팩':unitOf(r.code))+'</td><td class="tl note-s">'+(r.sauce?E(r.note||''):'')+(l&&String(l.src).includes('조정')?' <span class="adj">기초 이월</span>':'')+'</td></tr>';});
     const semis=new Map();recs.forEach(o=>{if(o.semi&&type==='완제품'){const k=o.semi.name+'|'+o.semi.lot;const x=semis.get(k)||{...o.semi,kg:0};x.kg+=o.semi.kg;semis.set(k,x);}});
     [...semis.values()].forEach(s=>{t+='<tr><td>'+gt('반제품')+'</td><td class="tl">'+E(s.name)+'</td><td>'+lotBtn(s.lot,'semi',s.name)+'</td><td>'+(recs[0]?recs[0].date:'')+'</td><td class="tr">'+n(s.kg,1)+'</td><td>kg</td><td class="tl note-s">수율 '+Math.round(s.yield_*100)+'%</td></tr>';});
     t+='</tbody></table></div>';
@@ -330,7 +334,7 @@ function openLot(lot,kind,code){
   }
   // 이력 (생산·출고 / 투입처)
   let hist='<div class="tbl-wrap"><table><thead><tr>'+TH('일자')+TH('채널')+TH('출고처')+TH('완제품')+TH('완제품 LOT')+TH('생산·출고')+(type==='완제품'?'':TH('이 LOT 투입량'))+'</tr></thead><tbody>';
-  recs.forEach(o=>{let use='';if(type!=='완제품'){if(type==='반제품')use=n(o.semi.kg,1)+'kg';else if(type==='부자재')use=n(o.pk.filter(p=>p.lot===lot&&(!code||p.code===code)).reduce((s,p)=>s+p.qty,0),0);else use=n(o.raws.filter(r=>r.code===code&&String(r.lot).split(',').includes(lot)).reduce((s,r)=>s+(r.qty||0),0))||'팩';}
+  recs.forEach(o=>{let use='';if(type!=='완제품'){if(type==='반제품')use=n(o.semi.kg,1)+'kg';else if(type==='부자재')use=n(o.pk.filter(p=>p.lot===lot&&(!code||p.code===code)).reduce((s,p)=>s+p.qty,0),0);else use=(isKg(code)?n(kq(code,o.raws.filter(r=>r.code===code&&String(r.lot).split(',').includes(lot)).reduce((s,r)=>s+(r.qty||0),0)),1)+'kg':n(o.raws.filter(r=>r.code===code&&String(r.lot).split(',').includes(lot)).reduce((s,r)=>s+(r.qty||0),0)))||'팩';}
     hist+='<tr><td>'+o.date+'</td><td><span class="ch-tag">'+E(o.ch)+'</span></td><td>'+E(cenOf(o))+'</td><td class="tl">'+E(o.pname)+'</td><td>'+lotBtn(o.lot,'prod',o.code)+'</td><td class="tr">'+n(o.qty,0)+'</td>'+(type==='완제품'?'':'<td class="tr">'+use+'</td>')+'</tr>';});
   hist+='</tbody></table></div>';
   body+='<div class="sec2"><div class="t">'+(type==='완제품'?'📋 이 LOT 생산·출고 이력':'🏭 이 LOT가 투입된 완제품·출고처 (순추적)')+' ('+recs.length+'건)</div>'+(recs.length?hist:'<p style="color:#999;font-size:12px">이력 없음</p>')+'</div>';
