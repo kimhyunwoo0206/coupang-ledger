@@ -316,10 +316,12 @@ function openLot(lot,kind,code){
   if(type==='완제품'||type==='반제품'){
     body+='<div style="text-align:center;margin-bottom:14px;font-size:12px;color:#8c95a3">📅 작업일: <strong>'+(recs[0]?recs[0].date:'')+'</strong> · 생산·출고 '+n(qsum,0)+'개</div>';
     // 투입 원료·반제품 (역추적)
-    const mats=new Map();recs.forEach(o=>{o.raws.forEach(r=>{const k=r.code+'|'+r.lot;const x=mats.get(k)||{r,qty:0,kg:0};x.qty+=r.qty||0;x.kg+=r.kg||0;mats.set(k,x);});});
+    const mats=new Map();recs.forEach(o=>{o.raws.forEach(r=>{
+      if(r.sauce){const s=CP.sauce.find(x=>x.date===o.date&&x.code===r.code);(s?s.lots:[]).forEach(l=>{const k=l.code+'|'+l.lot;if(!mats.has(k))mats.set(k,{r:{code:l.code,lot:l.lot,sauce:true,note:'당일 '+nm(l.code)+' 합계 (잔량 폐기)'},qty:l.qty||0,kg:0});});return;}
+      const k=r.code+'|'+r.lot;const x=mats.get(k)||{r,qty:0,kg:0};x.qty+=r.qty||0;x.kg+=r.kg||0;mats.set(k,x);});});
     let t='<div class="tbl-wrap"><table><thead><tr>'+TH('구분')+TH('재료명')+TH('LOT (클릭시 추적)')+TH('입고일')+TH('투입량')+TH('단위')+TH('비고')+'</tr></thead><tbody>';
     [...mats.values()].forEach(({r,qty,kg})=>{const l=RAWLOT[r.code+'|'+String(r.lot).split(',')[0]];
-      t+='<tr><td>'+gt(r.byproduct?'원료':rawGbn(r.code))+'</td><td class="tl">'+E(nm(r.code))+(r.byproduct?' (손질 부산물)':'')+'</td><td>'+String(r.lot).split(',').map(x=>lotBtn(x,'raw',r.code)).join(' ')+'</td><td>'+(l?l.date:'')+'</td><td class="tr">'+(r.sauce?'-':n(qty))+'</td><td>'+(r.sauce?'팩':unitOf(r.code))+'</td><td class="tl note-s">'+(r.sauce?E(r.note||''):(kg&&r.unit_kg!=1?n(kg,1)+'kg':''))+(l&&String(l.src).includes('조정')?' <span class="adj">기초재고 이월</span>':'')+'</td></tr>';});
+      t+='<tr><td>'+gt(r.byproduct?'원료':rawGbn(r.code))+'</td><td class="tl">'+E(nm(r.code))+(r.byproduct?' (손질 부산물)':'')+'</td><td>'+String(r.lot).split(',').map(x=>lotBtn(x,'raw',r.code)).join(' ')+'</td><td>'+(l?l.date:'')+'</td><td class="tr">'+n(qty)+'</td><td>'+(r.sauce?'팩':unitOf(r.code))+'</td><td class="tl note-s">'+(r.sauce?E(r.note||''):(kg&&r.unit_kg!=1?n(kg,1)+'kg':''))+(l&&String(l.src).includes('조정')?' <span class="adj">기초재고 이월</span>':'')+'</td></tr>';});
     const semis=new Map();recs.forEach(o=>{if(o.semi&&type==='완제품'){const k=o.semi.name+'|'+o.semi.lot;const x=semis.get(k)||{...o.semi,kg:0};x.kg+=o.semi.kg;semis.set(k,x);}});
     [...semis.values()].forEach(s=>{t+='<tr><td>'+gt('반제품')+'</td><td class="tl">'+E(s.name)+'</td><td>'+lotBtn(s.lot,'semi',s.name)+'</td><td>'+(recs[0]?recs[0].date:'')+'</td><td class="tr">'+n(s.kg,1)+'</td><td>kg</td><td class="tl note-s">수율 '+Math.round(s.yield_*100)+'%</td></tr>';});
     t+='</tbody></table></div>';
