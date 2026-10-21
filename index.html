@@ -188,6 +188,7 @@ const V=o=>Array.isArray(o)?o:Object.values(o||{});
 const dow=d=>['일','월','화','수','목','금','토'][new Date(d+'T00:00:00').getDay()]+'요일';
 const gt=g=>'<span class="gbn-tag gbn-'+g+'">'+g+'</span>';
 const lotBtn=(lot,kind,code)=>lot?'<button class="lot-btn" data-lot="'+E(lot)+'" data-kind="'+(kind||'')+'" data-code="'+E(code||'')+'">'+E(lot)+'</button>':'<span style="color:var(--g3)">-</span>';
+const cenOf=o=>o.center||(o.ch==='MF'?'MF34':o.ch);
 const rawGbn=c=>/^B-/.test(c)?'부재료':/^S-/.test(c)?'반제품':'원료';
 const unitOf=c=>{const l=CP.raw_lots.find(x=>x.code===c);const u=l?l.unit_kg:1;if(/^B-/.test(c))return '팩';if(c==='S-701')return '축';if(c==='S-609')return '박스(1.2kg)';return u&&u!=1?'박스('+n(u)+'kg)':'kg';};
 
@@ -258,7 +259,7 @@ function renderT1(d,ch,rows){
   R.forEach(r=>{const adj=String(r.l.src||'').includes('조정');
     h+='<tr><td>'+gt(rawGbn(r.c))+'</td><td class="tl">'+E(nm(r.c))+'</td><td>'+lotBtn(r.lot,'raw',r.c)+'</td><td>'+unitOf(r.c)+'</td><td class="tr">'+n(r.prev)+'</td><td class="tr">'+n(r.inn)+'</td><td class="tr">'+n(r.use)+'</td>'
       +'<td class="tr curr-col">'+n(r.cur)+'</td><td style="font-size:11px">'+E(r.l.partner||(String(r.l.src||'').includes('MF')?'MF 당일 매입':''))+'</td>'
-      +'<td class="tl note-s">'+(adj?'<span class="adj">기초재고 이월(7/22)</span> ':'')+(r.l.date?'입고 '+r.l.date.slice(5)+' ':'')+(r.us?'→ '+E([...r.us].slice(0,3).join(', '))+(r.us.size>3?' 외 '+(r.us.size-3):''):'')+'</td></tr>';});
+      +'<td class="tl note-s">'+(adj?'<span class="adj">기초 이월</span>':'')+'</td></tr>';});
   $('tb1').innerHTML=h+'</tbody></table>';
 }
 function renderT2(rows){
@@ -267,17 +268,17 @@ function renderT2(rows){
   if(!S.size)return nd('tb2');
   let h='<table><thead><tr><th>구분</th><th style="min-width:130px;text-align:left">품목명</th><th>LOT</th><th>규격</th><th>전일재고</th><th>생산</th><th>투입</th><th>현재고</th><th>비고</th></tr></thead><tbody>';
   [...S.values()].forEach(s=>{h+='<tr><td>'+gt('반제품')+'</td><td class="tl">'+E(s.name)+(s.code?' <span style="color:var(--g4);font-size:10px">'+E(s.code)+'</span>':'')+'</td><td>'+lotBtn(s.lot,'semi',s.name)+'</td><td>kg</td><td class="tr">-</td><td class="tr">'+n(s.kg,1)+'</td><td class="tr">'+n(s.kg,1)+'</td><td class="tr curr-col">-</td>'
-    +'<td class="tl note-s">원료 '+n(s.raw_kg,1)+'kg × 수율 '+Math.round(s.yield_*100)+'% (원료 LOT '+E([...s.raws].join(', '))+') → '+E([...s.to].slice(0,3).join(', '))+(s.to.size>3?' 외 '+(s.to.size-3):'')+'</td></tr>';});
+    +'<td class="tl note-s">수율 '+Math.round(s.yield_*100)+'%</td></tr>';});
   $('tb2').innerHTML=h+'</tbody></table>';
 }
 function renderT3(rows){
   if(!rows.length)return nd('tb3');
   const G=new Map();
-  rows.forEach(o=>{const k=o.code+'|'+o.ch;const g=G.get(k)||{o,qty:0,cen:{}};g.qty+=o.qty;g.cen[o.center||o.ch]=(g.cen[o.center||o.ch]||0)+o.qty;G.set(k,g);});
+  rows.forEach(o=>{const k=o.code+'|'+o.ch;const g=G.get(k)||{o,qty:0,cen:{}};g.qty+=o.qty;g.cen[cenOf(o)]=(g.cen[cenOf(o)]||0)+o.qty;G.set(k,g);});
   let h='<table><thead><tr><th>구분</th><th style="min-width:160px;text-align:left">품목명</th><th>LOT</th><th>규격</th><th>전일재고</th><th>생산</th><th>출고</th><th>현재고</th><th>출고처</th><th>비고</th></tr></thead><tbody>';
   [...G.values()].sort((a,b)=>a.o.ch.localeCompare(b.o.ch)||b.qty-a.qty).forEach(g=>{
     h+='<tr><td>'+gt('완제품')+'</td><td class="tl">'+E(g.o.pname)+'</td><td>'+lotBtn(g.o.lot,'prod',g.o.code)+'</td><td>'+(g.o.kg?n(g.o.kg)+'kg':'EA')+'</td><td class="tr">-</td><td class="tr">'+n(g.qty,0)+'</td><td class="tr">'+n(g.qty,0)+'</td><td class="tr curr-col">-</td>'
-      +'<td style="font-size:11px;text-align:left"><span class="ch-tag">'+E(g.o.ch)+'</span>'+Object.entries(g.cen).map(([c,q])=>E(c)+' '+n(q,0)).join(', ')+'</td><td class="tl note-s">'+E(g.o.code)+'</td></tr>';});
+      +'<td style="font-size:11px;text-align:left">'+(g.o.ch==='MF'?'':'<span class="ch-tag">'+E(g.o.ch)+'</span>')+(Object.keys(g.cen).length===1?E(Object.keys(g.cen)[0]):Object.entries(g.cen).map(([c,q])=>E(c)+' '+n(q,0)+'개').join(' · '))+'</td><td class="tl note-s">'+E(g.o.code)+'</td></tr>';});
   $('tb3').innerHTML=h+'</tbody></table>';
 }
 function renderT4(d,ch,rows){
@@ -317,11 +318,11 @@ function openLot(lot,kind,code){
     body+='<div style="text-align:center;margin-bottom:14px;font-size:12px;color:#8c95a3">📅 작업일: <strong>'+(recs[0]?recs[0].date:'')+'</strong> · 생산·출고 '+n(qsum,0)+'개</div>';
     // 투입 원료·반제품 (역추적)
     const mats=new Map();recs.forEach(o=>{o.raws.forEach(r=>{
-      if(r.sauce){const s=CP.sauce.find(x=>x.date===o.date&&x.code===r.code);(s?s.lots:[]).forEach(l=>{const k=l.code+'|'+l.lot;if(!mats.has(k))mats.set(k,{r:{code:l.code,lot:l.lot,sauce:true,note:'당일 '+nm(l.code)+' 합계 (잔량 폐기)'},qty:l.qty||0,kg:0});});return;}
+      if(r.sauce){const s=CP.sauce.find(x=>x.date===o.date&&x.code===r.code);(s?s.lots:[]).forEach(l=>{const k=l.code+'|'+l.lot;if(!mats.has(k))mats.set(k,{r:{code:l.code,lot:l.lot,sauce:true,note:'잔량 폐기'},qty:l.qty||0,kg:0});});return;}
       const k=r.code+'|'+r.lot;const x=mats.get(k)||{r,qty:0,kg:0};x.qty+=r.qty||0;x.kg+=r.kg||0;mats.set(k,x);});});
     let t='<div class="tbl-wrap"><table><thead><tr>'+TH('구분')+TH('재료명')+TH('LOT (클릭시 추적)')+TH('입고일')+TH('투입량')+TH('단위')+TH('비고')+'</tr></thead><tbody>';
     [...mats.values()].forEach(({r,qty,kg})=>{const l=RAWLOT[r.code+'|'+String(r.lot).split(',')[0]];
-      t+='<tr><td>'+gt(r.byproduct?'원료':rawGbn(r.code))+'</td><td class="tl">'+E(nm(r.code))+(r.byproduct?' (손질 부산물)':'')+'</td><td>'+String(r.lot).split(',').map(x=>lotBtn(x,'raw',r.code)).join(' ')+'</td><td>'+(l?l.date:'')+'</td><td class="tr">'+n(qty)+'</td><td>'+(r.sauce?'팩':unitOf(r.code))+'</td><td class="tl note-s">'+(r.sauce?E(r.note||''):(kg&&r.unit_kg!=1?n(kg,1)+'kg':''))+(l&&String(l.src).includes('조정')?' <span class="adj">기초재고 이월</span>':'')+'</td></tr>';});
+      t+='<tr><td>'+gt(r.byproduct?'원료':rawGbn(r.code))+'</td><td class="tl">'+E(nm(r.code))+(r.byproduct?' (손질 부산물)':'')+'</td><td>'+String(r.lot).split(',').map(x=>lotBtn(x,'raw',r.code)).join(' ')+'</td><td>'+(l?l.date:'')+'</td><td class="tr">'+n(qty)+'</td><td>'+(r.sauce?'팩':unitOf(r.code))+'</td><td class="tl note-s">'+(r.sauce?E(r.note||''):(kg&&r.unit_kg!=1?n(kg,1)+'kg':''))+(l&&String(l.src).includes('조정')?' <span class="adj">기초 이월</span>':'')+'</td></tr>';});
     const semis=new Map();recs.forEach(o=>{if(o.semi&&type==='완제품'){const k=o.semi.name+'|'+o.semi.lot;const x=semis.get(k)||{...o.semi,kg:0};x.kg+=o.semi.kg;semis.set(k,x);}});
     [...semis.values()].forEach(s=>{t+='<tr><td>'+gt('반제품')+'</td><td class="tl">'+E(s.name)+'</td><td>'+lotBtn(s.lot,'semi',s.name)+'</td><td>'+(recs[0]?recs[0].date:'')+'</td><td class="tr">'+n(s.kg,1)+'</td><td>kg</td><td class="tl note-s">수율 '+Math.round(s.yield_*100)+'%</td></tr>';});
     t+='</tbody></table></div>';
@@ -330,7 +331,7 @@ function openLot(lot,kind,code){
   // 이력 (생산·출고 / 투입처)
   let hist='<div class="tbl-wrap"><table><thead><tr>'+TH('일자')+TH('채널')+TH('출고처')+TH('완제품')+TH('완제품 LOT')+TH('생산·출고')+(type==='완제품'?'':TH('이 LOT 투입량'))+'</tr></thead><tbody>';
   recs.forEach(o=>{let use='';if(type!=='완제품'){if(type==='반제품')use=n(o.semi.kg,1)+'kg';else if(type==='부자재')use=n(o.pk.filter(p=>p.lot===lot&&(!code||p.code===code)).reduce((s,p)=>s+p.qty,0),0);else use=n(o.raws.filter(r=>r.code===code&&String(r.lot).split(',').includes(lot)).reduce((s,r)=>s+(r.qty||0),0))||'팩';}
-    hist+='<tr><td>'+o.date+'</td><td><span class="ch-tag">'+E(o.ch)+'</span></td><td>'+E(o.center||o.ch)+'</td><td class="tl">'+E(o.pname)+'</td><td>'+lotBtn(o.lot,'prod',o.code)+'</td><td class="tr">'+n(o.qty,0)+'</td>'+(type==='완제품'?'':'<td class="tr">'+use+'</td>')+'</tr>';});
+    hist+='<tr><td>'+o.date+'</td><td><span class="ch-tag">'+E(o.ch)+'</span></td><td>'+E(cenOf(o))+'</td><td class="tl">'+E(o.pname)+'</td><td>'+lotBtn(o.lot,'prod',o.code)+'</td><td class="tr">'+n(o.qty,0)+'</td>'+(type==='완제품'?'':'<td class="tr">'+use+'</td>')+'</tr>';});
   hist+='</tbody></table></div>';
   body+='<div class="sec2"><div class="t">'+(type==='완제품'?'📋 이 LOT 생산·출고 이력':'🏭 이 LOT가 투입된 완제품·출고처 (순추적)')+' ('+recs.length+'건)</div>'+(recs.length?hist:'<p style="color:#999;font-size:12px">이력 없음</p>')+'</div>';
   body+='<div style="text-align:center;color:#8c95a3;font-size:11px;padding-top:6px">㈜위드프레쉬 쿠팡 수불대장 | '+new Date().toLocaleString('ko-KR')+'</div></div>';
