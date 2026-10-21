@@ -156,7 +156,6 @@ tbody td.tl{text-align:left}tbody td.tr{text-align:right}
           <div class="sec-hd">반제품 <span>│ 전일 + 생산 − 투입 = 현재고 (kg)</span></div><div class="tbl-wrap" id="tb2"></div>
           <div class="sec-hd">완제품 <span>│ 전일 + 생산 − 출고 = 현재고</span></div><div class="tbl-wrap" id="tb3"></div>
           <div class="sec-hd">부자재 <span>│ 전일 + 입고 − 투입(레시피) = 현재고</span></div><div class="tbl-wrap" id="tb4"></div>
-          <div class="note-s" style="margin-top:10px;color:var(--g4)">※ 쿠팡 납품 상품은 출고일 당일 생산(주문생산). 원료는 선입선출. 반제품 = 원료 투입량 × 공정 수율(당일 전량 투입). "기초" 표시 원료는 기록 시작(7/23) 전 보유 재고 이월분. LOT 번호를 누르면 이력과 연계(순·역추적)가 표시됩니다.</div>
         </div>
       </div>
     </div>
@@ -274,7 +273,7 @@ function renderT2(rows){
   if(!S.size)return nd('tb2');
   let h='<table><thead><tr><th>구분</th><th style="min-width:130px;text-align:left">품목명</th><th>LOT</th><th>규격</th><th>전일재고</th><th>생산</th><th>투입</th><th>현재고</th><th>비고</th></tr></thead><tbody>';
   [...S.values()].forEach(s=>{h+='<tr><td>'+gt('반제품')+'</td><td class="tl">'+E(s.name)+(s.code?' <span style="color:var(--g4);font-size:10px">'+E(s.code)+'</span>':'')+'</td><td>'+lotBtn(s.lot,'semi',s.name)+'</td><td>kg</td><td class="tr">-</td><td class="tr">'+n(s.kg,1)+'</td><td class="tr">'+n(s.kg,1)+'</td><td class="tr curr-col">-</td>'
-    +'<td class="tl note-s">수율 '+Math.round(s.yield_*100)+'%</td></tr>';});
+    +'<td class="tl note-s"></td></tr>';});
   $('tb2').innerHTML=h+'</tbody></table>';
 }
 function renderT3(rows){
@@ -330,7 +329,7 @@ function openLot(lot,kind,code){
     [...mats.values()].forEach(({r,qty,kg})=>{const l=RAWLOT[r.code+'|'+String(r.lot).split(',')[0]];
       t+='<tr><td>'+gt(r.byproduct?'원료':rawGbn(r.code))+'</td><td class="tl">'+E(nm(r.code))+(r.byproduct?' (손질 부산물)':'')+'</td><td>'+String(r.lot).split(',').map(x=>lotBtn(x,'raw',r.code)).join(' ')+'</td><td>'+(l?l.date:'')+'</td><td class="tr">'+(r.sauce?n(qty):n(kq(r.code,qty),1))+'</td><td>'+(r.sauce?'팩':unitOf(r.code))+'</td><td class="tl note-s">'+(r.sauce?E(r.note||''):'')+(l&&String(l.src).includes('조정')?' <span class="adj">기초 이월</span>':'')+'</td></tr>';});
     const semis=new Map();recs.forEach(o=>{if(o.semi&&type==='완제품'){const k=o.semi.name+'|'+o.semi.lot;const x=semis.get(k)||{...o.semi,kg:0};x.kg+=o.semi.kg;semis.set(k,x);}});
-    [...semis.values()].forEach(s=>{t+='<tr><td>'+gt('반제품')+'</td><td class="tl">'+E(s.name)+'</td><td>'+lotBtn(s.lot,'semi',s.name)+'</td><td>'+(recs[0]?recs[0].date:'')+'</td><td class="tr">'+n(s.kg,1)+'</td><td>kg</td><td class="tl note-s">수율 '+Math.round(s.yield_*100)+'%</td></tr>';});
+    [...semis.values()].forEach(s=>{t+='<tr><td>'+gt('반제품')+'</td><td class="tl">'+E(s.name)+'</td><td>'+lotBtn(s.lot,'semi',s.name)+'</td><td>'+(recs[0]?recs[0].date:'')+'</td><td class="tr">'+n(s.kg,1)+'</td><td>kg</td><td class="tl note-s"></td></tr>';});
     t+='</tbody></table></div>';
     body+='<div class="sec2"><div class="t">📐 투입 원료·반제품 (역추적) — LOT 클릭 시 해당 LOT 추적</div>'+t+'</div>';
   }
